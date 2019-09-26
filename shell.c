@@ -19,9 +19,40 @@ void init_shell() {
     clear();
     char* username = getenv("USER");
     
-    printf("\n\n\n\n\nHello, @%s\n", username);
-    sleep(2);
+    printf("Hello, @%s\n", username);
+    sleep(1);
     clear();
+}
+
+// Function to print Current Directory. 
+void printFullDir() {
+    char cwd[1024];
+    getcwd(cwd, sizeof(cwd));
+    printf("\n%s", cwd);
+}
+
+char* printCurrFolder() {
+    char cwd[1024];
+    char* dir = malloc(512);
+    getcwd(cwd, sizeof(cwd));
+    int i = 0, j = 0;
+    
+    while (i < 512 && cwd[i] != '\0') {
+     
+        if (cwd[i] == '/')
+            
+            j = 0;
+        
+        else
+            
+            dir[j++] = cwd[i];
+        
+        i++;
+    }
+    
+    dir[j] = '\0';
+    
+    return dir;
 }
   
 // Function to take input 
@@ -33,7 +64,7 @@ int takeInput(char* str) {
     gethostname(hostname, 1023);
     char* username = getenv("USER");
     
-    printf("\n[%s@%s]", username, hostname);
+    printf("\n[%s@%s %s]", username, hostname, printCurrFolder());
     
     buf = readline("$ ");
     if (strlen(buf) != 0) {
@@ -43,13 +74,6 @@ int takeInput(char* str) {
     } else {
         return 1;
     }
-}
-  
-// Function to print Current Directory. 
-void printDir() {
-    char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
-    printf("\n%s", cwd);
 }
   
 // Function where the system command is executed 
@@ -206,7 +230,7 @@ int main() {
   
     while (1) {
         // print shell line 
-        printDir();
+        printFullDir();
         // take input 
         if (takeInput(inputString)) 
             continue;
