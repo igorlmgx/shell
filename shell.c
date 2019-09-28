@@ -24,14 +24,7 @@ void init_shell() {
     clear();
 }
 
-// Function to print Current Directory. 
-void printFullDir() {
-    char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
-    printf("\n%s", cwd);
-}
-
-char* printCurrFolder() {
+char* getDir() {
     char cwd[1024];
     char* dir = malloc(512);
     getcwd(cwd, sizeof(cwd));
@@ -64,7 +57,7 @@ int takeInput(char* str) {
     gethostname(hostname, 1023);
     char* username = getenv("USER");
     
-    printf("\n[%s@%s %s]", username, hostname, printCurrFolder());
+    printf("\033[0;31m[%s@%s \033[1;31m%s\033[0;31m]\033[0m", username, hostname, getDir());
     
     buf = readline("$ ");
     if (strlen(buf) != 0) {
@@ -86,7 +79,7 @@ void execArgs(char** parsed) {
         return;
     } else if (pid == 0) {
         if (execvp(parsed[0], parsed) < 0) {
-            printf("\nNao foi possivel executar o comando...");
+            printf("\nNao foi possivel executar o comando...\n");
         }
         exit(0);
     } else {
@@ -209,18 +202,43 @@ void parseSpace(char* str, char** parsed) {
             i--;
     }
 }
+
+int parsePipe(char* str, char** strpiped) { 
+    int i; 
+    for (i = 0; i < 2; i++) { 
+        strpiped[i] = strsep(&str, "|"); 
+        if (strpiped[i] == NULL) 
+            break; 
+    } 
   
-int processString(char* str, char** parsed, char** parsedpipe) {
+    if (strpiped[1] == NULL) 
+        return 0; // returns zero if no pipe is found. 
+    else { 
+        return 1; 
+    } 
+}
   
-    char* strpiped[2];
-    
-    parseSpace(str, parsed);
+int processString(char* str, char** parsed, char** parsedpipe) { 
   
-    if (handler(parsed))
-        return 0;
+    char* strpiped[2]; 
+    int piped = 0; 
+  
+    piped = parsePipe(str, strpiped); 
+  
+    if (piped) { 
+        parseSpace(strpiped[0], parsed); 
+        parseSpace(strpiped[1], parsedpipe); 
+  
+    } else { 
+  
+        parseSpace(str, parsed); 
+    } 
+  
+    if (handler(parsed)) 
+        return 0; 
     else
-        return 1;
-} 
+        return 1 + piped; 
+}
   
 int main() {
     char inputString[MAXCOM], *parsedArgs[MAXLIST];
@@ -229,8 +247,6 @@ int main() {
     init_shell();
   
     while (1) {
-        // print shell line 
-        printFullDir();
         // take input 
         if (takeInput(inputString)) 
             continue;
@@ -243,7 +259,7 @@ int main() {
         // 2 if it is including a pipe. 
   
         // execute 
-        if (execFlag == 1) 
+        if (execFlag == 1)  
             execArgs(parsedArgs);
   
         if (execFlag == 2) 
