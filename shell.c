@@ -1,6 +1,6 @@
 /*
 SHELL DESENVOLVIDO EM LINGUAGEM C, 2019
-Autores:    Igor Lúcio Manta Guedes RA: 
+Autores:    Igor Lúcio Manta Guedes RA: 743185
             Karina Mayumi Johansson RA: 758617
 */
 
@@ -12,9 +12,8 @@ Autores:    Igor Lúcio Manta Guedes RA:
 #include<sys/wait.h> 
 #include<readline/readline.h> 
 #include<readline/history.h> 
-  
-#define MAXCOM 1000 // número máximo de letras suportadas 
-#define MAXLIST 100 // número máximo de comandos suportados 
+
+#define MAX 100 // número máximo de comandos suportados 
   
 #define clear() printf("\033[H\033[J")
   
@@ -93,76 +92,15 @@ void execArgs(char** parsed) {
     }
 }
   
-// Função onde comandos de sistema com pipe são executados 
-void execArgsPiped(char** parsed, char** parsedpipe) {
-    int pipefd[2];
-    pid_t p1, p2;
-  
-    if (pipe(pipefd) < 0) {
-        printf("\nFalha ao inicializar pipe");
-        return;
-    }
-    p1 = fork();
-    if (p1 < 0) {
-        printf("\nFalha ao realizar fork (pid < 0)");
-        return;
-    }
-  
-    if (p1 == 0) {
-        close(pipefd[0]);
-        dup2(pipefd[1], STDOUT_FILENO);
-        close(pipefd[1]);
-  
-        if (execvp(parsed[0], parsed) < 0) {
-            printf("\nNao foi possivel executar o comando 1...");
-            exit(0);
-        }
-    } else {
-        p2 = fork();
-  
-        if (p2 < 0) {
-            printf("\nFalha ao realizar fork (pid < 0)");
-            return;
-        }
-  
-        if (p2 == 0) {
-            close(pipefd[1]);
-            dup2(pipefd[0], STDIN_FILENO);
-            close(pipefd[0]);
-            if (execvp(parsedpipe[0], parsedpipe) < 0) {
-                printf("\nNao foi possivel executar o comando 2...");
-                exit(0);
-            }
-        } else {
-            wait(NULL);
-            wait(NULL);
-        }
-    }
-}
-  
-// Help command builtin 
-void openHelp() {
-    puts("\nLista de comandos disponiveis:"
-        "\n>cd"
-        "\n>ls"
-        "\n>exit"
-        "\n>comandos genericos disponiveis no shell padrao"
-        "\n>pipes"
-        "\n>tratamento de espacos indevidos");
-  
-    return;
-}
-  
 // função para executar comandos implementados internamente 
 int handler(char** parsed) {
-    int n_cmds = 3, i, input = 0;
+    int n_cmds = 2, i, input = 0;
     char* commands[n_cmds];
   
     commands[0] = "exit";
     commands[1] = "cd";
-    commands[2] = "help";
   
-    for (i = 0;i < n_cmds;i++) {
+    for (i = 0; i < n_cmds;i++) {
         if (strcmp(parsed[0], commands[i]) == 0) {
             input = i + 1;
             break;
@@ -170,16 +108,23 @@ int handler(char** parsed) {
     }
   
     switch (input) {
-    case 1: 
-        printf("\nAdeus ):\n");
+    case 1:
+        printf("Adeus ):\n");
         exit(0);
-    case 2: 
-        chdir(parsed[1]);
+    case 2:
+		i = 2;
+		char dir[MAX];
+		strcpy(dir, parsed[1]);
+		
+		while(i < MAX && parsed[i]) {
+			strcat(dir, " ");
+			strcat(dir, parsed[i]);
+			i++;
+		}
+		
+        chdir(dir);
         return 1;
-    case 3: 
-        openHelp();
-        return 1;
-    default: 
+    default:
         break;
     }
   
@@ -190,7 +135,7 @@ int handler(char** parsed) {
 void parseSpace(char* str, char** parsed) {
     int i;
   
-    for (i = 0;i < MAXLIST;i++) {
+    for (i = 0;i < MAX;i++) {
         parsed[i] = strsep(&str, " ");
   
         if (parsed[i] == NULL) 
@@ -199,66 +144,37 @@ void parseSpace(char* str, char** parsed) {
             i--;
     }
 }
-
-int parsePipe(char* str, char** strpiped) { 
-    int i; 
-    for (i = 0; i < 2; i++) { 
-        strpiped[i] = strsep(&str, "|"); 
-        if (strpiped[i] == NULL) 
-            break; 
-    } 
-  
-    if (strpiped[1] == NULL) 
-        return 0;
-    else { 
-        return 1; 
-    } 
-}
   
 // função que retorna tipo de comando com base nas entradas str, parsed e parsedpipe
-int processString(char* str, char** parsed, char** parsedpipe) { 
+int processString(char* str, char** parsed) {
   
     char* strpiped[2]; 
-    int piped = 0; 
   
-    piped = parsePipe(str, strpiped); 
-  
-    if (piped) { 
-        parseSpace(strpiped[0], parsed); 
-        parseSpace(strpiped[1], parsedpipe); 
-  
-    } else { 
-  
-        parseSpace(str, parsed); 
-    } 
+	parseSpace(str, parsed); 
   
     if (handler(parsed)) 
         return 0; 
     else
-        return 1 + piped; 
+        return 1; 
 }
   
 int main() {
-    char inputString[MAXCOM], *parsedArgs[MAXLIST];
-    char* parsedArgsPiped[MAXLIST];
+    char inputString[1000], *parsedArgs[MAX];
     int execFlag = 0;
     init_shell();
-  
+  	
     while (1) {
         // recebe entrada
         if (takeInput(inputString)) 
             continue;
-        // processa 
-        execFlag = processString(inputString,
-        parsedArgs, parsedArgsPiped);
+        // processa
+        execFlag = processString(inputString, parsedArgs);
         // execflag retorna zero se não existe comando ou se é um comando implementado internamente
   
         // executa
-        if (execFlag == 1)  
+        if (execFlag)  
             execArgs(parsedArgs);
-  
-        if (execFlag == 2) 
-            execArgsPiped(parsedArgs, parsedArgsPiped);
     } 
     return 0;
 }
+
