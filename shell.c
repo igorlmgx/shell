@@ -1,3 +1,9 @@
+/*
+SHELL DESENVOLVIDO EM LINGUAGEM C, 2019
+Autores:    Igor Lúcio Manta Guedes RA: 
+            Karina Mayumi Johansson RA: 758617
+*/
+
 #include<stdio.h> 
 #include<string.h> 
 #include<stdlib.h> 
@@ -7,14 +13,13 @@
 #include<readline/readline.h> 
 #include<readline/history.h> 
   
-#define MAXCOM 1000 // max number of letters to be supported 
-#define MAXLIST 100 // max number of commands to be supported 
+#define MAXCOM 1000 // número máximo de letras suportadas 
+#define MAXLIST 100 // número máximo de comandos suportados 
   
-// Clearing the shell using escape sequences 
 #define clear() printf("\033[H\033[J")
   
-// Greeting shell during startup
 
+//inicialização
 void init_shell() {
     clear();
     char* username = getenv("USER");
@@ -24,6 +29,7 @@ void init_shell() {
     clear();
 }
 
+//retorna diretório atual
 char* getDir() {
     char cwd[1024];
     char* dir = malloc(512);
@@ -48,7 +54,7 @@ char* getDir() {
     return dir;
 }
   
-// Function to take input 
+// função para recuperar entrada
 int takeInput(char* str) {
     char* buf;
     char hostname[1024];
@@ -69,9 +75,8 @@ int takeInput(char* str) {
     }
 }
   
-// Function where the system command is executed 
+// função onde os comandos de sistema são executados 
 void execArgs(char** parsed) {
-    // Forking a child 
     pid_t pid = fork();
 
     if (pid == -1) {
@@ -83,15 +88,13 @@ void execArgs(char** parsed) {
         }
         exit(0);
     } else {
-        // waiting for child to terminate
         wait(NULL);
         return;
     }
 }
   
-// Function where the piped system commands is executed 
+// Função onde comandos de sistema com pipe são executados 
 void execArgsPiped(char** parsed, char** parsedpipe) {
-    // 0 is read end, 1 is write end 
     int pipefd[2];
     pid_t p1, p2;
   
@@ -106,8 +109,6 @@ void execArgsPiped(char** parsed, char** parsedpipe) {
     }
   
     if (p1 == 0) {
-        // Child 1 executing.. 
-        // It only needs to write at the write end 
         close(pipefd[0]);
         dup2(pipefd[1], STDOUT_FILENO);
         close(pipefd[1]);
@@ -117,7 +118,6 @@ void execArgsPiped(char** parsed, char** parsedpipe) {
             exit(0);
         }
     } else {
-        // Parent executing 
         p2 = fork();
   
         if (p2 < 0) {
@@ -125,8 +125,6 @@ void execArgsPiped(char** parsed, char** parsedpipe) {
             return;
         }
   
-        // Child 2 executing.. 
-        // It only needs to read at the read end 
         if (p2 == 0) {
             close(pipefd[1]);
             dup2(pipefd[0], STDIN_FILENO);
@@ -136,7 +134,6 @@ void execArgsPiped(char** parsed, char** parsedpipe) {
                 exit(0);
             }
         } else {
-            // parent executing, waiting for two children 
             wait(NULL);
             wait(NULL);
         }
@@ -156,7 +153,7 @@ void openHelp() {
     return;
 }
   
-// Function to execute builtin commands 
+// função para executar comandos implementados internamente 
 int handler(char** parsed) {
     int n_cmds = 3, i, input = 0;
     char* commands[n_cmds];
@@ -189,7 +186,7 @@ int handler(char** parsed) {
     return 0;
 }
   
-// function for parsing command words 
+// função para analisar e recuperar cada palavra de um comando
 void parseSpace(char* str, char** parsed) {
     int i;
   
@@ -212,12 +209,13 @@ int parsePipe(char* str, char** strpiped) {
     } 
   
     if (strpiped[1] == NULL) 
-        return 0; // returns zero if no pipe is found. 
+        return 0;
     else { 
         return 1; 
     } 
 }
   
+// função que retorna tipo de comando com base nas entradas str, parsed e parsedpipe
 int processString(char* str, char** parsed, char** parsedpipe) { 
   
     char* strpiped[2]; 
@@ -247,18 +245,15 @@ int main() {
     init_shell();
   
     while (1) {
-        // take input 
+        // recebe entrada
         if (takeInput(inputString)) 
             continue;
-        // process 
+        // processa 
         execFlag = processString(inputString,
         parsedArgs, parsedArgsPiped);
-        // execflag returns zero if there is no command 
-        // or it is a builtin command, 
-        // 1 if it is a simple command 
-        // 2 if it is including a pipe. 
+        // execflag retorna zero se não existe comando ou se é um comando implementado internamente
   
-        // execute 
+        // executa
         if (execFlag == 1)  
             execArgs(parsedArgs);
   
